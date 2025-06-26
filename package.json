@@ -1,0 +1,34 @@
+{
+  "name": "mtext-editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json}\"",
+    "lint": "eslint ./src --ext .ts",
+    "lint:fix": "eslint ./src --ext .ts --fix",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/three": "^0.177.0",
+    "@types/tinymce": "^5.5.0",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^9.26.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.0",
+    "globals": "^16.2.0",
+    "prettier": "^3.6.1",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@mlightcad/mtext-renderer": "^0.2.2",
+    "three": "^0.177.0",
+    "tinymce": "^7.9.1"
+  }
+}
