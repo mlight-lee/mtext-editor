@@ -10,6 +10,8 @@ export type TinyMceNode = {
   underline?: boolean;
   overline?: boolean;
   strikethrough?: boolean;
+  subscript?: boolean;
+  superscript?: boolean;
   color?: number; // ACI color index (1-255)
   rgbColor?: number; // RGB color as 0xRRGGBB
   font?: string; // font family
@@ -77,51 +79,57 @@ export class TinyMceToMTextConverter {
 
   // Apply formatting codes (bold, italic, underline, color, font, etc.)
   private static applyFormatting(text: string, node: TinyMceNode): string {
-    let result = text;
-    if (node.bold) {
-      result = `\\b1;${result}\\b0;`;
-    }
-    if (node.italic) {
-      result = `\\i1;${result}\\i0;`;
-    }
+    let codes = '';
+    // Only underline, overline, strikethrough, color, font, etc. have separate codes
     if (node.underline) {
-      result = `\\L${result}\\l`;
+      codes += '\\L';
     }
     if (node.overline) {
-      result = `\\O${result}\\o`;
+      codes += '\\O';
     }
     if (node.strikethrough) {
-      result = `\\K${result}\\k`;
+      codes += '\\K';
+    }
+    if (node.superscript) {
+      text = `\\S${text}^ ;`;
+    }
+    if (node.subscript) {
+      text = `\\S^ ${text};`;
     }
     if (node.color) {
-      result = `\\C${node.color};${result}\\C0;`;
+      codes += `\\C${node.color};`;
     }
     if (node.rgbColor) {
-      result = `\\c${node.rgbColor & 0xffffff};${result}\\c0;`;
+      codes += `\\c${node.rgbColor & 0xffffff};`;
     }
     if (node.height) {
-      result = `\\H${node.height};${result}\\H;`;
+      codes += `\\H${node.height};`;
     }
     if (node.width) {
-      result = `\\W${node.width};${result}\\W;`;
+      codes += `\\W${node.width};`;
     }
     if (node.tracking) {
-      result = `\\T${node.tracking};${result}\\T;`;
+      codes += `\\T${node.tracking};`;
     }
     if (node.slant) {
-      result = `\\Q${node.slant};${result}\\Q;`;
+      codes += `\\Q${node.slant};`;
     }
-    if (node.font) {
-      result = `\\f${this.fontCommand(node)};${result}\\f;`;
+    // Font command: if font, or bold/italic present, use font command
+    if (node.font || node.bold || node.italic) {
+      codes += `\\f${this.fontCommand(node)};`;
     }
-    return result;
+    // If any formatting is present, wrap in {<codes>text} (no closing codes)
+    if (codes) {
+      return `{${codes}${text}}`;
+    }
+    return text;
   }
 
-  // Font command: "\fArial|b1|i0;"
+  // Font command: "\fArial|b1|i0;". If bold/italic present but no font, use default font (Arial)
   private static fontCommand(node: TinyMceNode): string {
-    const family = node.font || '';
-    const bold = node.fontBold ? 'b1' : 'b0';
-    const italic = node.fontItalic ? 'i1' : 'i0';
+    const family = node.font || 'Arial';
+    const bold = (node.fontBold || node.bold) ? 'b1' : 'b0';
+    const italic = (node.fontItalic || node.italic) ? 'i1' : 'i0';
     return `${family}|${bold}|${italic}`;
   }
 
@@ -197,6 +205,9 @@ export class TinyMceToMTextConverter {
         ) {
           thisFormat.strikethrough = true;
         }
+        // Add subscript/superscript support
+        if (el.tagName === 'SUB') thisFormat.subscript = true;
+        if (el.tagName === 'SUP') thisFormat.superscript = true;
         // Add color support
         if (el.style && el.style.color) {
           // Convert color to RGB number

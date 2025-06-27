@@ -5,7 +5,6 @@ import 'tinymce/models/dom/model.min.js';
 import 'tinymce/skins/ui/oxide/skin.js';
 import 'tinymce/plugins/lists';
 import 'tinymce/plugins/link';
-import 'tinymce/plugins/table';
 import 'tinymce/plugins/code';
 import 'tinymce/skins/ui/oxide/skin.min.css';
 import 'tinymce/skins/content/default/content.min.css';
@@ -20,7 +19,7 @@ const mtextRenderer = new MTextRenderer('editor-container');
 tinymce.init({
   selector: '#tinymce-editor',
   plugins: 'lists link code',
-  toolbar: 'undo redo | forecolor | bold italic underline strikethrough overline | alignleft aligncenter alignright | bullist numlist | link code | letterspacing',
+  toolbar: 'undo redo | forecolor | bold italic underline strikethrough overline subscript superscript | alignleft aligncenter alignright | bullist numlist | link code | letterspacing',
   menubar: false,
   skin: false,
   content_css: false,
