@@ -26,7 +26,7 @@ export type TinyMceNode = {
     indent?: number;
     left?: number;
     right?: number;
-    align?: 'left' | 'right' | 'center' | 'justified' | 'distributed';
+    align?: "left" | "right" | "center" | "justified" | "distributed";
     tabs?: number[];
   };
   // Add more formatting as needed
@@ -35,27 +35,31 @@ export type TinyMceNode = {
 export class TinyMceToMTextConverter {
   // Entry point: accepts TinyMCE content (array of nodes)
   public static convert(nodes: TinyMceNode[]): string {
-    return nodes.map(node => this.nodeToMText(node)).join('');
+    return nodes.map((node) => this.nodeToMText(node)).join("");
   }
 
   private static nodeToMText(node: TinyMceNode): string {
-    let mtext = '';
+    let mtext = "";
     // Handle paragraph properties
     if (node.paragraph) {
       mtext += this.paragraphCommand(node.paragraph);
     }
     // Handle stacking/fractions
     if (node.stack) {
-      mtext += this.stackCommand(node.stack.numerator, node.stack.denominator, node.stack.divider);
+      mtext += this.stackCommand(
+        node.stack.numerator,
+        node.stack.denominator,
+        node.stack.divider,
+      );
       return mtext;
     }
     // Handle text node
-    if (node.type === 'text' && node.text) {
+    if (node.type === "text" && node.text) {
       mtext += this.applyFormatting(this.encodeMText(node.text), node);
     } else if (node.children) {
-      mtext += node.children.map(child => this.nodeToMText(child)).join('');
-      if (node.type === 'paragraph') {
-        mtext += '\\P'; // MText paragraph break
+      mtext += node.children.map((child) => this.nodeToMText(child)).join("");
+      if (node.type === "paragraph") {
+        mtext += "\\P"; // MText paragraph break
       }
     }
     return mtext;
@@ -64,14 +68,14 @@ export class TinyMceToMTextConverter {
   // Encode special/caret characters and fractions
   private static encodeMText(text: string): string {
     // Caret encoded characters
-    text = text.replace(/\^I/g, '\\t'); // tabulator
-    text = text.replace(/\^J/g, '\\P'); // line break
-    text = text.replace(/\^M/g, ''); // CR ignored
-    text = text.replace(/\^ /g, '^'); // caret glyph
+    text = text.replace(/\^I/g, "\\t"); // tabulator
+    text = text.replace(/\^J/g, "\\P"); // line break
+    text = text.replace(/\^M/g, ""); // CR ignored
+    text = text.replace(/\^ /g, "^"); // caret glyph
     // Special encoded characters
-    text = text.replace(/%%[cC]/g, 'Ø');
-    text = text.replace(/%%[dD]/g, '°');
-    text = text.replace(/%%[pP]/g, '±');
+    text = text.replace(/%%[cC]/g, "Ø");
+    text = text.replace(/%%[dD]/g, "°");
+    text = text.replace(/%%[pP]/g, "±");
     // Multi-byte character encoding (not implemented, just pass through)
     // Stacking/fractions handled by stackCommand
     return text;
@@ -79,16 +83,16 @@ export class TinyMceToMTextConverter {
 
   // Apply formatting codes (bold, italic, underline, color, font, etc.)
   private static applyFormatting(text: string, node: TinyMceNode): string {
-    let codes = '';
+    let codes = "";
     // Only underline, overline, strikethrough, color, font, etc. have separate codes
     if (node.underline) {
-      codes += '\\L';
+      codes += "\\L";
     }
     if (node.overline) {
-      codes += '\\O';
+      codes += "\\O";
     }
     if (node.strikethrough) {
-      codes += '\\K';
+      codes += "\\K";
     }
     if (node.superscript) {
       text = `\\S${text}^ ;`;
@@ -109,13 +113,13 @@ export class TinyMceToMTextConverter {
       codes += `\\W${node.width};`;
     }
     if (node.tracking) {
-      codes += `\\T${node.tracking};`;
+      codes += `\\T${node.tracking}x;`;
     }
     if (node.slant) {
       codes += `\\Q${node.slant};`;
     }
     // Font command: if font, or bold/italic present, use font command
-    if (node.font || node.bold || node.italic) {
+    if (node.font ?? node.bold ?? node.italic) {
       codes += `\\f${this.fontCommand(node)};`;
     }
     // If any formatting is present, wrap in {<codes>text} (no closing codes)
@@ -127,119 +131,190 @@ export class TinyMceToMTextConverter {
 
   // Font command: "\fArial|b1|i0;". If bold/italic present but no font, use default font (Arial)
   private static fontCommand(node: TinyMceNode): string {
-    const family = node.font || 'Arial';
-    const bold = (node.fontBold || node.bold) ? 'b1' : 'b0';
-    const italic = (node.fontItalic || node.italic) ? 'i1' : 'i0';
+    const family = node.font ?? "Arial";
+    const bold = (node.fontBold ?? node.bold) ? "b1" : "b0";
+    const italic = (node.fontItalic ?? node.italic) ? "i1" : "i0";
     return `${family}|${bold}|${italic}`;
   }
 
   // Stacking/fraction command: "\S1^ 2;" or "\S1/2;"
-  private static stackCommand(numerator: string, denominator: string, divider: string = '^'): string {
+  private static stackCommand(
+    numerator: string,
+    denominator: string,
+    divider: string = "^",
+  ): string {
     // For "^" divider, add a space after to avoid caret decoding
-    if (divider === '^') {
-      divider = '^ ';
+    if (divider === "^") {
+      divider = "^ ";
     }
     return `\\S${numerator}${divider}${denominator};`;
   }
 
   // Paragraph properties command
-  private static paragraphCommand(paragraph: TinyMceNode['paragraph']): string {
-    let cmd = '\\px';
+  private static paragraphCommand(paragraph: TinyMceNode["paragraph"]): string {
+    let cmd = "\\px";
     if (paragraph?.indent !== undefined) cmd += `i${paragraph.indent},`;
     if (paragraph?.left !== undefined) cmd += `l${paragraph.left},`;
     if (paragraph?.right !== undefined) cmd += `r${paragraph.right},`;
     if (paragraph?.align) {
       const alignMap: Record<string, string> = {
-        left: 'ql', right: 'qr', center: 'qc', justified: 'qj', distributed: 'qd',
+        left: "ql",
+        right: "qr",
+        center: "qc",
+        justified: "qj",
+        distributed: "qd",
       };
-      cmd += `q${alignMap[paragraph.align] || 'ql'},`;
+      cmd += `q${alignMap[paragraph.align] || "ql"},`;
     }
     if (paragraph?.tabs && paragraph.tabs.length > 0) {
-      cmd += 't' + paragraph.tabs.join(',') + ',';
+      cmd += "t" + paragraph.tabs.join(",") + ",";
     }
-    if (cmd.endsWith(',')) cmd = cmd.slice(0, -1);
-    cmd += ';';
+    if (cmd.endsWith(",")) cmd = cmd.slice(0, -1);
+    cmd += ";";
     return cmd;
   }
 
   // Parse HTML string to TinyMceNode[] (basic implementation: text, b, strong, i, em, u)
   public static htmlToTinyMceNodes(html: string): TinyMceNode[] {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = parser.parseFromString(html, "text/html");
     // Helper to merge formatting
-    function mergeFormat(parent: Partial<TinyMceNode>, child: Partial<TinyMceNode>): Partial<TinyMceNode> {
+    function mergeFormat(
+      parent: Partial<TinyMceNode>,
+      child: Partial<TinyMceNode>,
+    ): Partial<TinyMceNode> {
       return { ...parent, ...child };
     }
-    function parseNode(node: Node, format: Partial<TinyMceNode> = {}): TinyMceNode[] {
+    function parseNode(
+      node: Node,
+      format: Partial<TinyMceNode> = {},
+    ): TinyMceNode[] {
       if (node.nodeType === Node.TEXT_NODE) {
         // Apply accumulated formatting to text node
-        return [{ type: 'text', text: node.textContent || '', ...format }];
+        return [{ type: "text", text: node.textContent ?? "", ...format }];
       }
       if (node.nodeType === Node.ELEMENT_NODE) {
         const el = node as HTMLElement;
         let children: TinyMceNode[] = [];
-        if (el.tagName === 'BR') {
-          return [{ type: 'br' }];
+        if (el.tagName === "BR") {
+          return [{ type: "br" }];
         }
         // Determine this element's formatting
         let thisFormat: Partial<TinyMceNode> = {};
-        if (el.tagName === 'B' || el.tagName === 'STRONG') thisFormat.bold = true;
-        if (el.tagName === 'I' || el.tagName === 'EM') thisFormat.italic = true;
+        if (el.tagName === "B" || el.tagName === "STRONG")
+          thisFormat.bold = true;
+        if (el.tagName === "I" || el.tagName === "EM") thisFormat.italic = true;
         // Add underline support
         if (
-          el.tagName === 'U' ||
-          (el.style && el.style.textDecoration && el.style.textDecoration.includes('underline'))
+          el.tagName === "U" ||
+          el.style?.textDecoration?.includes("underline")
         ) {
           thisFormat.underline = true;
         }
         // Add overline support
-        if (el.style && el.style.textDecoration && el.style.textDecoration.includes('overline')) {
+        if (el.style?.textDecoration?.includes("overline")) {
           thisFormat.overline = true;
         }
         // Add strikethrough support
         if (
-          el.tagName === 'S' || 
-          el.tagName === 'STRIKE' || 
-          el.tagName === 'DEL' ||
-          (el.style && el.style.textDecoration && el.style.textDecoration.includes('line-through'))
+          el.tagName === "S" ||
+          el.tagName === "STRIKE" ||
+          el.tagName === "DEL" ||
+          el.style?.textDecoration?.includes("line-through")
         ) {
           thisFormat.strikethrough = true;
         }
         // Add subscript/superscript support
-        if (el.tagName === 'SUB') thisFormat.subscript = true;
-        if (el.tagName === 'SUP') thisFormat.superscript = true;
+        if (el.tagName === "SUB") thisFormat.subscript = true;
+        if (el.tagName === "SUP") thisFormat.superscript = true;
         // Add color support
-        if (el.style && el.style.color) {
+        if (el.style?.color) {
           // Convert color to RGB number
           const color = el.style.color;
-          if (color.startsWith('rgb')) {
+          if (color.startsWith("rgb")) {
             // Parse rgb(r, g, b) format
-            const [r, g, b] = color.match(/\d+/g)?.map(Number) || [0, 0, 0];
+            const [r, g, b] = color.match(/\d+/g)?.map(Number) ?? [0, 0, 0];
             thisFormat.rgbColor = (r << 16) | (g << 8) | b;
-          } else if (color.startsWith('#')) {
+          } else if (color.startsWith("#")) {
             // Parse hex format
             thisFormat.rgbColor = parseInt(color.slice(1), 16);
           }
         }
+        // Add letter spacing support
+        if (el.style?.letterSpacing) {
+          const letterSpacing = el.style.letterSpacing;
+          // Convert letter-spacing to tracking value
+          // letter-spacing can be in various units: em, px, pt, etc.
+          // For MText tracking, we need to convert to a relative value
+          if (letterSpacing.endsWith("em")) {
+            // Convert em to a tracking multiplier (em is relative to font size)
+            const emValue = parseFloat(letterSpacing);
+            thisFormat.tracking = emValue;
+          } else if (letterSpacing.endsWith("px")) {
+            // Convert px to tracking (assuming base font size of 12px)
+            const pxValue = parseFloat(letterSpacing);
+            thisFormat.tracking = pxValue / 12;
+          } else if (letterSpacing.endsWith("pt")) {
+            // Convert pt to tracking (1pt ≈ 1.33px, assuming base font size of 12px)
+            const ptValue = parseFloat(letterSpacing);
+            thisFormat.tracking = (ptValue * 1.33) / 12;
+          } else {
+            // Try to parse as a number (assume it's already in a reasonable format)
+            const numValue = parseFloat(letterSpacing);
+            if (!isNaN(numValue)) {
+              thisFormat.tracking = numValue;
+            }
+          }
+        }
+        // Also check for letterspacing format class (TinyMCE might apply this)
+        if (el.className?.includes("letterspacing")) {
+          // If no explicit letter-spacing style but has the class, use default value
+          if (!thisFormat.tracking) {
+            thisFormat.tracking = 10; // Default letter spacing value
+          }
+        }
+        // Add letter width support
+        if (el.style?.transform) {
+          const transform = el.style.transform;
+          // Parse transform: scaleX(value)
+          const scaleXMatch = transform.match(/scaleX\(([^)]+)\)/);
+          if (scaleXMatch) {
+            const scaleXValue = parseFloat(scaleXMatch[1]);
+            if (!isNaN(scaleXValue)) {
+              thisFormat.width = scaleXValue;
+            }
+          }
+        }
+        // Also check for letterwidth format class (TinyMCE might apply this)
+        if (el.className?.includes("letterwidth")) {
+          // If no explicit transform style but has the class, use default value
+          if (!thisFormat.width) {
+            thisFormat.width = 1; // Default letter width value
+          }
+        }
         // Merge parent and this element's formatting
         const mergedFormat = mergeFormat(format, thisFormat);
-        el.childNodes.forEach(child => {
+        el.childNodes.forEach((child) => {
           children = children.concat(parseNode(child, mergedFormat));
         });
-        if (el.tagName === 'P') {
+        if (el.tagName === "P") {
           // Paragraph node
-          return [{ type: 'paragraph', children, paragraph: {} }];
+          return [{ type: "paragraph", children, paragraph: {} }];
         }
-        let n: TinyMceNode = { type: el.tagName.toLowerCase(), children, ...thisFormat };
+        let n: TinyMceNode = {
+          type: el.tagName.toLowerCase(),
+          children,
+          ...thisFormat,
+        };
         return [n];
       }
       return [];
     }
     // Only parse body children
     let nodes: TinyMceNode[] = [];
-    doc.body.childNodes.forEach(child => {
+    doc.body?.childNodes.forEach((child) => {
       nodes = nodes.concat(parseNode(child));
     });
     return nodes;
   }
-} 
+}

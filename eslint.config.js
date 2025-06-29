@@ -16,7 +16,13 @@ export default [
       },
       globals: {
         // Add common globals that exist in both Node.js and browser
-        console: 'readonly'
+        console: 'readonly',
+        // Browser globals
+        document: 'readonly',
+        window: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        alert: 'readonly'
       }
     },
     plugins: {
