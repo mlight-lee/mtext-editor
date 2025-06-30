@@ -188,7 +188,7 @@ export class MTextRenderer {
     // Calculate dimensions
     const minX = box.min.x;
     const minY = box.min.y;
-    const maxX = width ?? box.max.x - box.min.x ? minX + width! : box.max.x;
+    const maxX = (width ?? box.max.x - box.min.x) ? minX + width! : box.max.x;
     const maxY = box.max.y;
 
     // Define the four corners
