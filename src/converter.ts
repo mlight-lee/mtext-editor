@@ -184,7 +184,9 @@ export class TinyMceToMTextConverter {
     function parseNode(node: Node, format: Partial<TinyMceNode> = {}): TinyMceNode[] {
       if (node.nodeType === Node.TEXT_NODE) {
         // Apply accumulated formatting to text node
-        return [{ type: 'text', text: node.textContent ?? '', ...format }];
+        // Replace non-breaking spaces (\u00A0) with regular spaces
+        const text = (node.textContent ?? '').replace(/\u00A0/g, ' ');
+        return [{ type: 'text', text, ...format }];
       }
       if (node.nodeType === Node.ELEMENT_NODE) {
         const el = node as HTMLElement;

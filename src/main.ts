@@ -12,6 +12,18 @@ import { TinyMceToMTextConverter } from './converter';
 import { MTextRenderer } from './renderer';
 
 let mtext = '';
+let showTextBox = true;
+
+// Get the checkbox element
+const showTextBoxCheckbox = document.getElementById('show-textbox-checkbox') as HTMLInputElement;
+if (showTextBoxCheckbox) {
+  showTextBox = showTextBoxCheckbox.checked;
+  showTextBoxCheckbox.addEventListener('change', () => {
+    showTextBox = showTextBoxCheckbox.checked;
+    // Re-render with the new value
+    void mtextRenderer.renderMText({ content: mtext, width: 5, isDrawTextBox: showTextBox });
+  });
+}
 
 // Initialize MTextRenderer for the 3D rendering area
 const mtextRenderer = new MTextRenderer('editor-container');
@@ -196,7 +208,7 @@ void tinymce.init({
       const nodes = TinyMceToMTextConverter.htmlToTinyMceNodes(editor.getContent());
       mtext = TinyMceToMTextConverter.convert(nodes);
       console.log('Current MText:', mtext);
-      void mtextRenderer.renderMText(mtext);
+      void mtextRenderer.renderMText({ content: mtext, width: 8.7, isDrawTextBox: showTextBox });
     });
   },
 });

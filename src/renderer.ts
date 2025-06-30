@@ -2,17 +2,45 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DefaultFontLoader, FontManager, MText, StyleManager } from '@mlightcad/mtext-renderer';
 
-export class MTextRenderer {
-  private scene: THREE.Scene;
-  private camera!: THREE.OrthographicCamera;
-  private renderer!: THREE.WebGLRenderer;
-  private controls!: OrbitControls;
-  private fontManager!: FontManager;
-  private styleManager!: StyleManager;
-  private currentMText: MText | null = null;
-  private fontLoader!: DefaultFontLoader;
-  private containerId: string;
+/** Options for rendering MText content */
+interface MTextRenderOptions {
+  /** The text content to be rendered */
+  content: string;
+  /** Optional width constraint for the text box. If not provided, text will flow naturally */
+  width?: number;
+  /** Whether to draw a bounding box around the text */
+  isDrawTextBox?: boolean;
+}
 
+/** Renderer class for MText content using Three.js */
+export class MTextRenderer {
+  /** Three.js scene containing all rendered objects */
+  private scene: THREE.Scene;
+  /** Orthographic camera for 2D rendering */
+  private camera!: THREE.OrthographicCamera;
+  /** WebGL renderer instance */
+  private renderer!: THREE.WebGLRenderer;
+  /** Orbit controls for camera manipulation */
+  private controls!: OrbitControls;
+  /** Font manager instance for handling text fonts */
+  private fontManager!: FontManager;
+  /** Style manager for text styling */
+  private styleManager!: StyleManager;
+  /** Currently rendered MText instance */
+  private currentMText: MText | null = null;
+  /** Font loader for loading required fonts */
+  private fontLoader!: DefaultFontLoader;
+  /** ID of the container element */
+  private containerId: string;
+  /** Box mesh for text bounding box */
+  private textBox: THREE.Mesh | null = null;
+  /** Line segments for text bounding box */
+  private textBoxLines: THREE.LineSegments | null = null;
+
+  /**
+   * Creates a new MTextRenderer instance
+   * @param containerId - ID of the HTML element to contain the renderer
+   */
   constructor(containerId: string) {
     this.containerId = containerId;
 
@@ -37,7 +65,7 @@ export class MTextRenderer {
       0.1,
       1000
     );
-    this.camera.position.z = 5;
+    this.camera.position.set(0, 0, 5);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -66,19 +94,18 @@ export class MTextRenderer {
     this.setupEventListeners();
 
     // Initialize fonts and UI, then render
-    this.initializeFonts()
-      .then(async () => {
-        // Initial render after fonts are loaded
-        await this.renderMText('Hello World!');
-      })
-      .catch((error) => {
-        console.error('Failed to initialize fonts:', error);
-      });
+    this.initializeFonts().catch((error) => {
+      console.error('Failed to initialize fonts:', error);
+    });
 
     // Start animation loop
     this.animate();
   }
 
+  /**
+   * Sets up the lighting in the scene
+   * @private
+   */
   private setupLights(): void {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambientLight);
@@ -88,6 +115,10 @@ export class MTextRenderer {
     this.scene.add(directionalLight);
   }
 
+  /**
+   * Sets up event listeners for window resize
+   * @private
+   */
   private setupEventListeners(): void {
     // Window resize
     window.addEventListener('resize', () => {
@@ -95,6 +126,10 @@ export class MTextRenderer {
     });
   }
 
+  /**
+   * Handles window resize events
+   * @private
+   */
   private handleResize(): void {
     const renderArea = document.getElementById(this.containerId);
     if (!renderArea) return;
@@ -119,6 +154,10 @@ export class MTextRenderer {
     this.renderer.render(this.scene, this.camera);
   }
 
+  /**
+   * Initializes required fonts
+   * @private
+   */
   private async initializeFonts(): Promise<void> {
     try {
       // Load available fonts for the dropdown
@@ -131,14 +170,74 @@ export class MTextRenderer {
     }
   }
 
-  async renderMText(content: string) {
+  /**
+   * Creates or updates a bounding box around the text using four lines
+   * @private
+   * @param box - The bounding box of the text to bound
+   * @param width - Optional fixed width for the box
+   */
+  private updateTextBox(box: THREE.Box3, width?: number): void {
+    // Remove existing text box lines if any
+    if (this.textBoxLines) {
+      this.scene.remove(this.textBoxLines);
+      this.textBoxLines = null;
+    }
+
+    if (!this.currentMText) return;
+
+    // Calculate dimensions
+    const minX = box.min.x;
+    const minY = box.min.y;
+    const maxX = (width ?? box.max.x - box.min.x) ? minX + width! : box.max.x;
+    const maxY = box.max.y;
+
+    // Define the four corners
+    const bl = new THREE.Vector3(minX, minY, 0); // bottom left
+    const br = new THREE.Vector3(maxX, minY, 0); // bottom right
+    const tr = new THREE.Vector3(maxX, maxY, 0); // top right
+    const tl = new THREE.Vector3(minX, maxY, 0); // top left
+
+    // Create geometry for the four lines (rectangle)
+    const points = [
+      bl,
+      br, // bottom
+      br,
+      tr, // right
+      tr,
+      tl, // top
+      tl,
+      bl, // left
+    ];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    // Create line material
+    const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+
+    // Create line segments
+    this.textBoxLines = new THREE.LineSegments(geometry, material);
+    this.scene.add(this.textBoxLines);
+  }
+
+  /**
+   * Renders MText content with optional text box
+   * @param options - Options for rendering the text
+   */
+  async renderMText(options: MTextRenderOptions) {
     // Remove existing MText if any
     if (this.currentMText) {
       this.scene.remove(this.currentMText);
     }
+    if (this.textBox) {
+      this.scene.remove(this.textBox);
+      this.textBox = null;
+    }
+    if (this.textBoxLines) {
+      this.scene.remove(this.textBoxLines);
+      this.textBoxLines = null;
+    }
 
     // Get required fonts from the MText content
-    const requiredFonts = Array.from(MText.getFonts(content, true));
+    const requiredFonts = Array.from(MText.getFonts(options.content, true));
     if (requiredFonts.length > 0) {
       try {
         // Load the required fonts
@@ -150,10 +249,10 @@ export class MTextRenderer {
 
     // Create new MText instance
     const mtextContent = {
-      text: content,
+      text: options.content,
       height: 0.1,
-      width: 0,
-      position: new THREE.Vector3(-3, 2, 0),
+      width: options.width ?? 0,
+      position: new THREE.Vector3(-4.5, 2, 0),
     };
 
     this.currentMText = new MText(
@@ -175,8 +274,22 @@ export class MTextRenderer {
     );
 
     this.scene.add(this.currentMText);
+
+    // If text box is requested, create it
+    if (options.isDrawTextBox) {
+      // Wait for the next frame to ensure box is updated
+      requestAnimationFrame(() => {
+        if (this.currentMText) {
+          this.updateTextBox(this.currentMText.box, options.width);
+        }
+      });
+    }
   }
 
+  /**
+   * Animation loop for continuous rendering
+   * @private
+   */
   private animate(): void {
     requestAnimationFrame(() => this.animate());
     this.controls.update();
