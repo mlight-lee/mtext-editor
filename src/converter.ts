@@ -240,6 +240,17 @@ export class TinyMceToMTextConverter {
             thisFormat.rgbColor = parseInt(color.slice(1), 16);
           }
         }
+        // Add font family support
+        if (el.style?.fontFamily) {
+          // Extract the primary font family (first in the list)
+          const fontFamily = el.style.fontFamily;
+          // Remove quotes and get the first font
+          const cleanFont = fontFamily
+            .replace(/['"]/g, "")
+            .split(",")[0]
+            .trim();
+          thisFormat.font = cleanFont;
+        }
         // Add letter spacing support
         if (el.style?.letterSpacing) {
           const letterSpacing = el.style.letterSpacing;

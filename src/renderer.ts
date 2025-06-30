@@ -20,7 +20,7 @@ export class MTextRenderer {
 
   constructor(containerId: string) {
     this.containerId = containerId;
-    
+
     // Initialize Three.js components
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x333333);
