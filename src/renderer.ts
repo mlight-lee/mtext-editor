@@ -1,11 +1,6 @@
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import {
-  DefaultFontLoader,
-  FontManager,
-  MText,
-  StyleManager,
-} from "@mlightcad/mtext-renderer";
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { DefaultFontLoader, FontManager, MText, StyleManager } from '@mlightcad/mtext-renderer';
 
 export class MTextRenderer {
   private scene: THREE.Scene;
@@ -40,7 +35,7 @@ export class MTextRenderer {
       frustumSize / 2,
       frustumSize / -2,
       0.1,
-      1000,
+      1000
     );
     this.camera.position.z = 5;
 
@@ -60,7 +55,7 @@ export class MTextRenderer {
 
     // Initialize managers and loader
     this.fontManager = FontManager.instance;
-    this.fontManager.defaultFont = "simkai";
+    this.fontManager.defaultFont = 'simkai';
     this.styleManager = new StyleManager();
     this.fontLoader = new DefaultFontLoader();
 
@@ -72,12 +67,12 @@ export class MTextRenderer {
 
     // Initialize fonts and UI, then render
     this.initializeFonts()
-      .then(() => {
+      .then(async () => {
         // Initial render after fonts are loaded
-        this.renderMText("Hello World!");
+        await this.renderMText('Hello World!');
       })
       .catch((error) => {
-        console.error("Failed to initialize fonts:", error);
+        console.error('Failed to initialize fonts:', error);
       });
 
     // Start animation loop
@@ -95,7 +90,7 @@ export class MTextRenderer {
 
   private setupEventListeners(): void {
     // Window resize
-    window.addEventListener("resize", () => {
+    window.addEventListener('resize', () => {
       this.handleResize();
     });
   }
@@ -131,15 +126,26 @@ export class MTextRenderer {
       // Load default fonts
       await this.fontLoader.load([this.fontManager.defaultFont]);
     } catch (error) {
-      console.error("Error loading fonts:", error);
+      console.error('Error loading fonts:', error);
       throw error; // Re-throw to handle in the constructor
     }
   }
 
-  renderMText(content: string): void {
+  async renderMText(content: string) {
     // Remove existing MText if any
     if (this.currentMText) {
       this.scene.remove(this.currentMText);
+    }
+
+    // Get required fonts from the MText content
+    const requiredFonts = Array.from(MText.getFonts(content, true));
+    if (requiredFonts.length > 0) {
+      try {
+        // Load the required fonts
+        await this.fontLoader.load(requiredFonts);
+      } catch (error) {
+        console.error('Error loading fonts:', error);
+      }
     }
 
     // Create new MText instance
@@ -153,7 +159,7 @@ export class MTextRenderer {
     this.currentMText = new MText(
       mtextContent,
       {
-        name: "Standard",
+        name: 'Standard',
         standardFlag: 0,
         fixedTextHeight: 0.1,
         widthFactor: 1,
@@ -161,11 +167,11 @@ export class MTextRenderer {
         textGenerationFlag: 0,
         lastHeight: 0.1,
         font: this.fontManager.defaultFont,
-        bigFont: "",
+        bigFont: '',
         color: 0xffffff,
       },
       this.styleManager,
-      this.fontManager,
+      this.fontManager
     );
 
     this.scene.add(this.currentMText);
