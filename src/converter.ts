@@ -35,7 +35,7 @@ export type TinyMceNode = {
 export class TinyMceToMTextConverter {
   // Entry point: accepts TinyMCE content (array of nodes)
   public static convert(nodes: TinyMceNode[]): string {
-    return nodes.map((node) => this.nodeToMText(node)).join('');
+    return nodes.map(node => this.nodeToMText(node)).join('');
   }
 
   private static nodeToMText(node: TinyMceNode): string {
@@ -53,7 +53,7 @@ export class TinyMceToMTextConverter {
     if (node.type === 'text' && node.text) {
       mtext += this.applyFormatting(this.encodeMText(node.text), node);
     } else if (node.children) {
-      mtext += node.children.map((child) => this.nodeToMText(child)).join('');
+      mtext += node.children.map(child => this.nodeToMText(child)).join('');
       if (node.type === 'paragraph') {
         mtext += '\\P'; // MText paragraph break
       }
@@ -293,7 +293,7 @@ export class TinyMceToMTextConverter {
         }
         // Merge parent and this element's formatting
         const mergedFormat = mergeFormat(format, thisFormat);
-        el.childNodes.forEach((child) => {
+        el.childNodes.forEach(child => {
           children = children.concat(parseNode(child, mergedFormat));
         });
         if (el.tagName === 'P') {
@@ -344,7 +344,7 @@ export class TinyMceToMTextConverter {
     }
     // Only parse body children
     let nodes: TinyMceNode[] = [];
-    doc.body?.childNodes.forEach((child) => {
+    doc.body?.childNodes.forEach(child => {
       nodes = nodes.concat(parseNode(child));
     });
     return nodes;

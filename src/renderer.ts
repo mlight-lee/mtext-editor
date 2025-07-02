@@ -94,7 +94,7 @@ export class MTextRenderer {
     this.setupEventListeners();
 
     // Initialize fonts and UI, then render
-    this.initializeFonts().catch((error) => {
+    this.initializeFonts().catch(error => {
       console.error('Failed to initialize fonts:', error);
     });
 
