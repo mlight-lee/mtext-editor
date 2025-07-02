@@ -173,10 +173,11 @@ export class MTextRenderer {
   /**
    * Creates or updates a bounding box around the text using four lines
    * @private
-   * @param box - The bounding box of the text to bound
-   * @param width - Optional fixed width for the box
+   * @param position - The top-left position of the text box
+   * @param width - The width of the text box
+   * @param height - The height of the text box
    */
-  private updateTextBox(box: THREE.Box3, width?: number): void {
+  private updateTextBox(position: THREE.Vector3, width: number, height: number): void {
     // Remove existing text box lines if any
     if (this.textBoxLines) {
       this.scene.remove(this.textBoxLines);
@@ -185,17 +186,11 @@ export class MTextRenderer {
 
     if (!this.currentMText) return;
 
-    // Calculate dimensions
-    const minX = box.min.x;
-    const minY = box.min.y;
-    const maxX = (width ?? box.max.x - box.min.x) ? minX + width! : box.max.x;
-    const maxY = box.max.y;
-
-    // Define the four corners
-    const bl = new THREE.Vector3(minX, minY, 0); // bottom left
-    const br = new THREE.Vector3(maxX, minY, 0); // bottom right
-    const tr = new THREE.Vector3(maxX, maxY, 0); // top right
-    const tl = new THREE.Vector3(minX, maxY, 0); // top left
+    // Use position as the top-left corner
+    const tl = position.clone();
+    const tr = position.clone().add(new THREE.Vector3(width, 0, 0));
+    const bl = position.clone().add(new THREE.Vector3(0, -height, 0));
+    const br = position.clone().add(new THREE.Vector3(width, -height, 0));
 
     // Create geometry for the four lines (rectangle)
     const points = [
@@ -280,7 +275,15 @@ export class MTextRenderer {
       // Wait for the next frame to ensure box is updated
       requestAnimationFrame(() => {
         if (this.currentMText) {
-          this.updateTextBox(this.currentMText.box, options.width);
+          const box = this.currentMText.box;
+          const height = box.max.y - box.min.y;
+          if (height > 0) {
+            this.updateTextBox(
+              new THREE.Vector3(mtextContent.position.x, box.max.y, 0),
+              mtextContent.width ?? 0,
+              height
+            );
+          }
         }
       });
     }

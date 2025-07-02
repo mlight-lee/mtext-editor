@@ -27,7 +27,7 @@
     "vite": "^7.0.0"
   },
   "dependencies": {
-    "@mlightcad/mtext-renderer": "^0.3.4",
+    "@mlightcad/mtext-renderer": "^0.3.5",
     "three": "^0.177.0",
     "tinymce": "^7.9.1"
   }

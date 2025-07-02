@@ -148,7 +148,7 @@ export class TinyMceToMTextConverter {
 
   // Paragraph properties command
   private static paragraphCommand(paragraph: TinyMceNode['paragraph']): string {
-    let cmd = '\\px';
+    let cmd = '\\p';
     if (paragraph?.indent !== undefined) cmd += `i${paragraph.indent},`;
     if (paragraph?.left !== undefined) cmd += `l${paragraph.left},`;
     if (paragraph?.right !== undefined) cmd += `r${paragraph.right},`;
@@ -160,7 +160,7 @@ export class TinyMceToMTextConverter {
         justified: 'qj',
         distributed: 'qd',
       };
-      cmd += `q${alignMap[paragraph.align] || 'ql'},`;
+      cmd += `${alignMap[paragraph.align] || 'ql'},`;
     }
     if (paragraph?.tabs && paragraph.tabs.length > 0) {
       cmd += 't' + paragraph.tabs.join(',') + ',';
@@ -298,7 +298,40 @@ export class TinyMceToMTextConverter {
         });
         if (el.tagName === 'P') {
           // Paragraph node
-          return [{ type: 'paragraph', children, paragraph: {} }];
+          // Extract alignment from align attribute or style
+          let align: 'left' | 'right' | 'center' | 'justified' | undefined;
+          // Check align attribute
+          const alignAttr = el.getAttribute('align');
+          if (alignAttr) {
+            if (alignAttr === 'left' || alignAttr === 'right' || alignAttr === 'center') {
+              align = alignAttr;
+            } else if (alignAttr === 'justify') {
+              align = 'justified';
+            }
+          }
+          // Check style.textAlign (JS-set styles)
+          const styleAlign = el.style?.textAlign;
+          if (styleAlign) {
+            if (styleAlign === 'left' || styleAlign === 'right' || styleAlign === 'center') {
+              align = styleAlign;
+            } else if (styleAlign === 'justify') {
+              align = 'justified';
+            }
+          }
+          // Parse inline style attribute for text-align
+          const styleAttr = el.getAttribute('style');
+          if (styleAttr) {
+            const match = styleAttr.match(/text-align\s*:\s*(left|right|center|justify)/i);
+            if (match) {
+              const val = match[1].toLowerCase();
+              if (val === 'left' || val === 'right' || val === 'center') {
+                align = val;
+              } else if (val === 'justify') {
+                align = 'justified';
+              }
+            }
+          }
+          return [{ type: 'paragraph', children, paragraph: align ? { align } : {} }];
         }
         let n: TinyMceNode = {
           type: el.tagName.toLowerCase(),
