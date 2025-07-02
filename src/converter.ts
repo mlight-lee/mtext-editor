@@ -161,6 +161,8 @@ export class TinyMceToMTextConverter {
         distributed: 'qd',
       };
       cmd += `${alignMap[paragraph.align] || 'ql'},`;
+    } else {
+      cmd += 'ql';
     }
     if (paragraph?.tabs && paragraph.tabs.length > 0) {
       cmd += 't' + paragraph.tabs.join(',') + ',';
