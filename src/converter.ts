@@ -35,7 +35,7 @@ export type TinyMceNode = {
 export class TinyMceToMTextConverter {
   // Entry point: accepts TinyMCE content (array of nodes)
   public static convert(nodes: TinyMceNode[]): string {
-    return nodes.map((node) => this.nodeToMText(node)).join('');
+    return nodes.map(node => this.nodeToMText(node)).join('');
   }
 
   private static nodeToMText(node: TinyMceNode): string {
@@ -53,7 +53,7 @@ export class TinyMceToMTextConverter {
     if (node.type === 'text' && node.text) {
       mtext += this.applyFormatting(this.encodeMText(node.text), node);
     } else if (node.children) {
-      mtext += node.children.map((child) => this.nodeToMText(child)).join('');
+      mtext += node.children.map(child => this.nodeToMText(child)).join('');
       if (node.type === 'paragraph') {
         mtext += '\\P'; // MText paragraph break
       }
@@ -148,7 +148,7 @@ export class TinyMceToMTextConverter {
 
   // Paragraph properties command
   private static paragraphCommand(paragraph: TinyMceNode['paragraph']): string {
-    let cmd = '\\px';
+    let cmd = '\\p';
     if (paragraph?.indent !== undefined) cmd += `i${paragraph.indent},`;
     if (paragraph?.left !== undefined) cmd += `l${paragraph.left},`;
     if (paragraph?.right !== undefined) cmd += `r${paragraph.right},`;
@@ -160,7 +160,9 @@ export class TinyMceToMTextConverter {
         justified: 'qj',
         distributed: 'qd',
       };
-      cmd += `q${alignMap[paragraph.align] || 'ql'},`;
+      cmd += `${alignMap[paragraph.align] || 'ql'},`;
+    } else {
+      cmd += 'ql';
     }
     if (paragraph?.tabs && paragraph.tabs.length > 0) {
       cmd += 't' + paragraph.tabs.join(',') + ',';
@@ -293,12 +295,45 @@ export class TinyMceToMTextConverter {
         }
         // Merge parent and this element's formatting
         const mergedFormat = mergeFormat(format, thisFormat);
-        el.childNodes.forEach((child) => {
+        el.childNodes.forEach(child => {
           children = children.concat(parseNode(child, mergedFormat));
         });
         if (el.tagName === 'P') {
           // Paragraph node
-          return [{ type: 'paragraph', children, paragraph: {} }];
+          // Extract alignment from align attribute or style
+          let align: 'left' | 'right' | 'center' | 'justified' | undefined;
+          // Check align attribute
+          const alignAttr = el.getAttribute('align');
+          if (alignAttr) {
+            if (alignAttr === 'left' || alignAttr === 'right' || alignAttr === 'center') {
+              align = alignAttr;
+            } else if (alignAttr === 'justify') {
+              align = 'justified';
+            }
+          }
+          // Check style.textAlign (JS-set styles)
+          const styleAlign = el.style?.textAlign;
+          if (styleAlign) {
+            if (styleAlign === 'left' || styleAlign === 'right' || styleAlign === 'center') {
+              align = styleAlign;
+            } else if (styleAlign === 'justify') {
+              align = 'justified';
+            }
+          }
+          // Parse inline style attribute for text-align
+          const styleAttr = el.getAttribute('style');
+          if (styleAttr) {
+            const match = styleAttr.match(/text-align\s*:\s*(left|right|center|justify)/i);
+            if (match) {
+              const val = match[1].toLowerCase();
+              if (val === 'left' || val === 'right' || val === 'center') {
+                align = val;
+              } else if (val === 'justify') {
+                align = 'justified';
+              }
+            }
+          }
+          return [{ type: 'paragraph', children, paragraph: align ? { align } : {} }];
         }
         let n: TinyMceNode = {
           type: el.tagName.toLowerCase(),
@@ -311,7 +346,7 @@ export class TinyMceToMTextConverter {
     }
     // Only parse body children
     let nodes: TinyMceNode[] = [];
-    doc.body?.childNodes.forEach((child) => {
+    doc.body?.childNodes.forEach(child => {
       nodes = nodes.concat(parseNode(child));
     });
     return nodes;
