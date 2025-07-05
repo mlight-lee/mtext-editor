@@ -32,7 +32,7 @@ void tinymce.init({
   selector: '#tinymce-editor',
   plugins: 'lists link code',
   toolbar:
-    'undo redo | fontfamily | forecolor | bold italic underline strikethrough overline subscript superscript | alignleft aligncenter alignright | bullist numlist | code | letterspacing letterwidth',
+    'undo redo | fontfamily | forecolor | bold italic underline strikethrough overline subscript superscript | alignleft aligncenter alignright | bullist numlist | letterspacing letterwidth | indentleft marginleft marginright | code',
   menubar: false,
   skin: false,
   content_css: false,
@@ -84,6 +84,23 @@ void tinymce.init({
         <path d='M22 12h-5' stroke='currentColor' stroke-width='1.2' stroke-linecap='round'/>
         <path d='M20 10l2 2-2 2' stroke='currentColor' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/>
       </svg>`
+    );
+
+    // Register custom indent icons
+    editor.ui.registry.addIcon(
+      'indentleft',
+      `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="2" rx="1" fill="currentColor"/><rect x="3" y="17" width="18" height="2" rx="1" fill="currentColor"/><rect x="11" y="11" width="10" height="2" rx="1" fill="currentColor"/><path d="M3 12h6m0 0-2-2m2 2-2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    );
+
+    // Register custom margin icons
+    editor.ui.registry.addIcon(
+      'marginleft',
+      `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="2" height="16" rx="1" fill="currentColor"/><rect x="7" y="7" width="12" height="2" rx="1" fill="currentColor"/><rect x="7" y="11" width="8" height="2" rx="1" fill="currentColor"/><rect x="7" y="15" width="6" height="2" rx="1" fill="currentColor"/></svg>`
+    );
+
+    editor.ui.registry.addIcon(
+      'marginright',
+      `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="19" y="4" width="2" height="16" rx="1" fill="currentColor"/><rect x="5" y="7" width="12" height="2" rx="1" fill="currentColor"/><rect x="9" y="11" width="8" height="2" rx="1" fill="currentColor"/><rect x="11" y="15" width="6" height="2" rx="1" fill="currentColor"/></svg>`
     );
 
     // Add letterspacing spinbox instead of toggle button
@@ -178,6 +195,159 @@ void tinymce.init({
                   false,
                   `<span style='display: inline-block; transform: scaleX(${letterWidth}); transform-origin: left;'>${selectedContent}</span>`
                 );
+              }
+            }
+            api.close();
+          },
+        });
+      },
+    });
+
+    // Add indent button
+    editor.ui.registry.addButton('indentleft', {
+      icon: 'indentleft',
+      tooltip: 'Set Indent',
+      onAction: function () {
+        editor.windowManager.open({
+          title: 'Set Indent',
+          body: {
+            type: 'panel',
+            items: [
+              {
+                type: 'input',
+                name: 'indent-value',
+                label: 'Indent Amount (em)',
+                placeholder: '2',
+              },
+            ],
+          },
+          buttons: [
+            {
+              type: 'submit',
+              text: 'Apply',
+            },
+          ],
+          onSubmit: function (api) {
+            const value = api.getData()['indent-value'];
+            if (value && !isNaN(parseFloat(value))) {
+              const indentAmount = parseFloat(value);
+
+              // Get the selected content or current paragraph
+              const selectedContent = editor.selection.getContent();
+              const currentNode = editor.selection.getNode();
+
+              if (selectedContent) {
+                // Apply to selected content
+                editor.execCommand(
+                  'mceInsertContent',
+                  false,
+                  `<div style='text-indent: ${indentAmount}em'>${selectedContent}</div>`
+                );
+              } else if (currentNode.nodeName === 'P' || currentNode.nodeName === 'DIV') {
+                // Apply to current paragraph
+                currentNode.style.textIndent = indentAmount * 16 + 'px'; // Convert em to px
+              }
+            }
+            api.close();
+          },
+        });
+      },
+    });
+
+    // Add margin left button
+    editor.ui.registry.addButton('marginleft', {
+      icon: 'marginleft',
+      tooltip: 'Set Left Margin',
+      onAction: function () {
+        editor.windowManager.open({
+          title: 'Set Left Margin',
+          body: {
+            type: 'panel',
+            items: [
+              {
+                type: 'input',
+                name: 'margin-value',
+                label: 'Left Margin (em)',
+                placeholder: '2',
+              },
+            ],
+          },
+          buttons: [
+            {
+              type: 'submit',
+              text: 'Apply',
+            },
+          ],
+          onSubmit: function (api) {
+            const value = api.getData()['margin-value'];
+            if (value && !isNaN(parseFloat(value))) {
+              const marginAmount = parseFloat(value);
+
+              // Get the selected content or current paragraph
+              const selectedContent = editor.selection.getContent();
+              const currentNode = editor.selection.getNode();
+
+              if (selectedContent) {
+                // Apply to selected content
+                editor.execCommand(
+                  'mceInsertContent',
+                  false,
+                  `<div style='margin-left: ${marginAmount}em'>${selectedContent}</div>`
+                );
+              } else if (currentNode.nodeName === 'P' || currentNode.nodeName === 'DIV') {
+                // Apply to current paragraph
+                currentNode.style.marginLeft = marginAmount * 16 + 'px'; // Convert em to px
+              }
+            }
+            api.close();
+          },
+        });
+      },
+    });
+
+    // Add margin right button
+    editor.ui.registry.addButton('marginright', {
+      icon: 'marginright',
+      tooltip: 'Set Right Margin',
+      onAction: function () {
+        editor.windowManager.open({
+          title: 'Set Right Margin',
+          body: {
+            type: 'panel',
+            items: [
+              {
+                type: 'input',
+                name: 'margin-value',
+                label: 'Right Margin (em)',
+                placeholder: '2',
+              },
+            ],
+          },
+          buttons: [
+            {
+              type: 'submit',
+              text: 'Apply',
+            },
+          ],
+          onSubmit: function (api) {
+            const value = api.getData()['margin-value'];
+            if (value && !isNaN(parseFloat(value))) {
+              const marginAmount = parseFloat(value);
+
+              // Get the selected content or current paragraph
+              const selectedContent = editor.selection.getContent();
+              const currentNode = editor.selection.getNode();
+
+              if (selectedContent) {
+                // Apply to selected content
+                editor.execCommand(
+                  'mceInsertContent',
+                  false,
+                  `<div style='margin-right: ${marginAmount}em'>${selectedContent}</div>`
+                );
+              } else if (currentNode.nodeName === 'P' || currentNode.nodeName === 'DIV') {
+                // Apply to current paragraph
+                currentNode.style.marginRight = marginAmount * 16 + 'px'; // Convert em to px
               }
             }
             api.close();

@@ -15,7 +15,10 @@ In order to leverage the existing rich text editors, we adopt the following tech
   - **Font styles**: font selection, color, bold, italic, underline, overline, and strikethrough.
   - Subscript, superscript, and fraction.
   - Letter space and letter width.
-  - Horizontal alignment: left, right, and center.
+  - Paragraph settings.
+    - Horizontal alignment: left, right, and center.
+    - Indent.
+    - Left & right margin.
   - List: bullet, numbered.
 - **AutoCAD MText Compatibility**: Seamlessly convert between TinyMCE's data model and AutoCAD MText format for interoperability with CAD workflows.
 - **Real-Time Scene Updates**: Instantly reflect text edits in the 3D scene, enabling interactive and dynamic content creation.
