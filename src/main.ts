@@ -8,8 +8,9 @@ import 'tinymce/plugins/link';
 import 'tinymce/plugins/code';
 import 'tinymce/skins/ui/oxide/skin.min.css';
 import 'tinymce/skins/content/default/content.min.css';
-import { TinyMceToMTextConverter } from './converter';
+import { ModelToMTextConverter } from './modelConverter';
 import { MTextRenderer } from './renderer';
+import { HtmlToModelConverter } from './htmlConverter';
 
 let mtext = '';
 let showTextBox = true;
@@ -375,8 +376,8 @@ void tinymce.init({
     });
     // Listen for content changes and convert to MText
     editor.on('Change', () => {
-      const nodes = TinyMceToMTextConverter.htmlToTinyMceNodes(editor.getContent());
-      mtext = TinyMceToMTextConverter.convert(nodes);
+      const nodes = HtmlToModelConverter.getInstance().htmlToTinyMceNodes(editor.getContent());
+      mtext = ModelToMTextConverter.getInstance().convert(nodes);
       console.log('Current MText:', mtext);
       void mtextRenderer.renderMText({ content: mtext, width: 8.7, isDrawTextBox: showTextBox });
     });
