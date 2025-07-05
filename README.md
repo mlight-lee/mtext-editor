@@ -6,7 +6,7 @@ In order to leverage the existing rich text editors, we adopt the following tech
 
 - Use `TinyMCE` to edit and format texts
 - Convert data model of `TinyMCE` to AutoCAD MText
-- Use '@mlightcad/mtext-renderer' (which is based on THREE.js) to render texts
+- Use [@mlightcad/mtext-renderer](https://github.com/mlight-lee/mtext-renderer) (which is based on THREE.js) to render texts
 
 ## Key Features
 
