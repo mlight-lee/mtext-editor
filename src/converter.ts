@@ -1,6 +1,14 @@
 // TinyMceToMTextConverter.ts
 // Converts TinyMCE data model to AutoCAD MText string, following AutoCAD MText specification
 
+export type ParagraphProperties = {
+  indent?: number;
+  left?: number;
+  right?: number;
+  align?: 'left' | 'right' | 'center' | 'justified' | 'distributed';
+  tabs?: number[];
+};
+
 export type TinyMceNode = {
   type: string;
   text?: string;
@@ -22,13 +30,7 @@ export type TinyMceNode = {
   tracking?: number; // character tracking
   slant?: number; // oblique angle
   stack?: { numerator: string; denominator: string; divider?: string }; // for fractions
-  paragraph?: {
-    indent?: number;
-    left?: number;
-    right?: number;
-    align?: 'left' | 'right' | 'center' | 'justified' | 'distributed';
-    tabs?: number[];
-  };
+  paragraph?: ParagraphProperties;
   // Add more formatting as needed
 };
 
@@ -176,12 +178,44 @@ export class TinyMceToMTextConverter {
   public static htmlToTinyMceNodes(html: string): TinyMceNode[] {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
+
     // Helper to merge formatting
     function mergeFormat(
       parent: Partial<TinyMceNode>,
       child: Partial<TinyMceNode>
     ): Partial<TinyMceNode> {
       return { ...parent, ...child };
+    }
+
+    // Helper to parse CSS values with unit conversion to em
+    function parseCssValue(value: string): number | null {
+      if (!value) return null;
+
+      const trimmedValue = value.trim();
+
+      if (trimmedValue.endsWith('em')) {
+        return parseFloat(trimmedValue);
+      } else if (trimmedValue.endsWith('px')) {
+        // Convert px to em (assuming base font size of 16px)
+        return parseFloat(trimmedValue) / 16;
+      } else if (trimmedValue.endsWith('pt')) {
+        // Convert pt to em (1pt ≈ 1.33px, assuming base font size of 16px)
+        return (parseFloat(trimmedValue) * 1.33) / 16;
+      } else {
+        // Try to parse as a number
+        const numValue = parseFloat(trimmedValue);
+        return !isNaN(numValue) ? numValue : null;
+      }
+    }
+
+    // Helper to extract CSS property from style attribute
+    function extractCssProperty(styleAttr: string, property: string): number | null {
+      const regex = new RegExp(`${property}\\s*:\\s*([^;]+)`, 'i');
+      const match = styleAttr.match(regex);
+      if (match) {
+        return parseCssValue(match[1]);
+      }
+      return null;
     }
     function parseNode(node: Node, format: Partial<TinyMceNode> = {}): TinyMceNode[] {
       if (node.nodeType === Node.TEXT_NODE) {
@@ -243,28 +277,9 @@ export class TinyMceToMTextConverter {
         }
         // Add letter spacing support
         if (el.style?.letterSpacing) {
-          const letterSpacing = el.style.letterSpacing;
-          // Convert letter-spacing to tracking value
-          // letter-spacing can be in various units: em, px, pt, etc.
-          // For MText tracking, we need to convert to a relative value
-          if (letterSpacing.endsWith('em')) {
-            // Convert em to a tracking multiplier (em is relative to font size)
-            const emValue = parseFloat(letterSpacing);
-            thisFormat.tracking = emValue;
-          } else if (letterSpacing.endsWith('px')) {
-            // Convert px to tracking (assuming base font size of 12px)
-            const pxValue = parseFloat(letterSpacing);
-            thisFormat.tracking = pxValue / 12;
-          } else if (letterSpacing.endsWith('pt')) {
-            // Convert pt to tracking (1pt ≈ 1.33px, assuming base font size of 12px)
-            const ptValue = parseFloat(letterSpacing);
-            thisFormat.tracking = (ptValue * 1.33) / 12;
-          } else {
-            // Try to parse as a number (assume it's already in a reasonable format)
-            const numValue = parseFloat(letterSpacing);
-            if (!isNaN(numValue)) {
-              thisFormat.tracking = numValue;
-            }
+          const trackingValue = parseCssValue(el.style.letterSpacing);
+          if (trackingValue !== null) {
+            thisFormat.tracking = trackingValue;
           }
         }
         // Also check for letterspacing format class (TinyMCE might apply this)
@@ -333,7 +348,65 @@ export class TinyMceToMTextConverter {
               }
             }
           }
-          return [{ type: 'paragraph', children, paragraph: align ? { align } : {} }];
+
+          // Extract paragraph properties (indent, left margin, right margin)
+          const paragraphProps: ParagraphProperties = {};
+          if (align) {
+            paragraphProps.align = align;
+          }
+
+          // Parse text-indent (first line indentation)
+          if (el.style?.textIndent) {
+            const indentValue = parseCssValue(el.style.textIndent);
+            if (indentValue !== null) {
+              paragraphProps.indent = indentValue;
+            }
+          }
+
+          // Parse margin-left
+          if (el.style?.marginLeft) {
+            const leftValue = parseCssValue(el.style.marginLeft);
+            if (leftValue !== null) {
+              paragraphProps.left = leftValue;
+            }
+          }
+
+          // Parse margin-right
+          if (el.style?.marginRight) {
+            const rightValue = parseCssValue(el.style.marginRight);
+            if (rightValue !== null) {
+              paragraphProps.right = rightValue;
+            }
+          }
+
+          // Also parse inline style attribute for these properties
+          if (styleAttr) {
+            // Parse text-indent from inline style
+            if (!paragraphProps.indent) {
+              const indentValue = extractCssProperty(styleAttr, 'text-indent');
+              if (indentValue !== null) {
+                paragraphProps.indent = indentValue;
+              }
+            }
+
+            // Parse margin-left from inline style
+            if (!paragraphProps.left) {
+              const leftValue = extractCssProperty(styleAttr, 'margin-left');
+              if (leftValue !== null) {
+                paragraphProps.left = leftValue;
+              }
+            }
+
+            // Parse margin-right from inline style
+            if (!paragraphProps.right) {
+              const rightValue = extractCssProperty(styleAttr, 'margin-right');
+              if (rightValue !== null) {
+                paragraphProps.right = rightValue;
+              }
+            }
+          }
+
+          return [{ type: 'paragraph', children, paragraph: paragraphProps }];
         }
         let n: TinyMceNode = {
           type: el.tagName.toLowerCase(),
